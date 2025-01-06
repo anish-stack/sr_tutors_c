@@ -1,50 +1,86 @@
 const express = require("express");
 const dotenv = require("dotenv");
-dotenv.config();
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
-const PORT = process.env.PORT || 5000;
-const app = express();
 const redis = require("redis");
+const cookieParser = require("cookie-parser");
 const connectDb = require("./config/db");
 const router = require("./routes/routes");
-// const setupBullBoard = require('./bullBoard');
+const setupBullBoard = require('./bullBoard');
+
+// Load environment variables
+dotenv.config();
+
+const PORT = process.env.PORT || 5000;
+const app = express();
 
 // Redis client setup
-// const redisClient = redis.createClient({
-//     url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
-// });
+const redisClient = redis.createClient({
+    url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
+});
 
-// (async () => {
-//     redisClient.on("error", (err) => {
-//         console.log(err);
-//     });
+(async () => {
+    redisClient.on("error", (err) => {
+        console.log("Redis Error:", err);
+    });
 
-//     redisClient.on("ready", () => console.log("Redis is ready"));
+    redisClient.on("ready", () => console.log("Redis is ready"));
 
-//     try {
-//         await redisClient.connect();
-//         await redisClient.ping();
-//         app.locals.redis = redisClient;
-//     } catch (err) {
-//         console.log(err);
-//     }
-// })();
+    try {
+        await redisClient.connect();
+        await redisClient.ping();
+        app.locals.redis = redisClient;
+    } catch (err) {
+        console.log("Redis Connection Error:", err);
+    }
+})();
 
-// Middleware for custom headers
+// Custom CORS middleware
 app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // Allowed origins for CORS
+    const ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+        "https://olyox.com",
+        "https://admin.olyox.com",
+        "https://www.olyox.com",
+        "http://www.admin.olyox"
+    ];
+
+    const origin = req.headers.origin;
+
+    // Check if the origin is allowed
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+
+    // Allow credentials and specify methods
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+    );
+
+    // Allow all necessary headers
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Access-Control-Allow-Credentials, Access-Control-Allow-Methods'
+    );
+
+    // Security headers
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+    // Preflight request handling
     if (req.method === 'OPTIONS') {
+        res.setHeader('Access-Control-Max-Age', '600'); // Cache preflight response for 10 minutes
         return res.status(204).end();
     }
+
     next();
 });
 
-// Middleware and routes setup
-app.use(cors());
+// Middleware setup
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -52,43 +88,41 @@ app.use(cookieParser());
 // Connect to database
 connectDb();
 
-// Routes
+// Default route
 app.get("/", (req, res) => {
-    res.send("Hello World I am From Olyox !");
+    res.send("Hello World! I am from Olyox!");
 });
 
-// app.get("/Flush-all-Redis-Cached", async (req, res) => {
-//     try {
-//         const redisClient = req.app.locals.redis;
+// Flush Redis cache route
+app.get("/Flush-all-Redis-Cached", async (req, res) => {
+    try {
+        const redisClient = req.app.locals.redis;
 
-//         if (!redisClient) {
-//             return res.status(500).json({
-//                 success: false,
-//                 message: "Redis client is not available.",
-//             });
-//         }
+        if (!redisClient) {
+            return res.status(500).json({
+                success: false,
+                message: "Redis client is not available.",
+            });
+        }
 
-//         await redisClient.flushAll(); // Flush all the Redis data
-//         res.redirect("/");
-//     } catch (err) {
-//         console.log("Error in flushing Redis cache:", err);
-//         res.status(500).json({
-//             success: false,
-//             message: "An error occurred while clearing the Redis cache.",
-//             error: err.message,
-//         });
-//     }
-// });
+        await redisClient.flushAll(); // Flush all Redis data
+        res.redirect("/");
+    } catch (err) {
+        console.log("Error in flushing Redis cache:", err);
+        res.status(500).json({
+            success: false,
+            message: "An error occurred while clearing the Redis cache.",
+            error: err.message,
+        });
+    }
+});
 
-app.use("/api/v1", router);
-
+// Admin login route
 app.post('/admin-login', (req, res) => {
-    console.log(req.body);
     const { email, password } = req.body;
     const defaultEmail = process.env.ADMIN_EMAIL || "admin@gmail.com";
     const defaultPassword = process.env.ADMIN_PASSWORD || "olyox@admin";
 
-    console.log(defaultEmail);
     if (email === defaultEmail && password === defaultPassword) {
         res.json({ message: 'Login successful', login: true });
     } else {
@@ -96,6 +130,10 @@ app.post('/admin-login', (req, res) => {
     }
 });
 
+// Main routes
+app.use("/api/v1", router);
+
+// Error handling middleware
 app.use((err, req, res, next) => {
     if (err.name === 'ValidationError') {
         for (const field in err.errors) {
@@ -113,11 +151,11 @@ app.use((err, req, res, next) => {
     }
 });
 
-// Setup Bull Board (keep this part as is)
-// setupBullBoard(app);
+// Setup Bull Board
+setupBullBoard(app);
 
-// Start the server without clustering
+// Start the server
 app.listen(PORT, () => {
-    // console.log(`Bull Board available at http://localhost:${PORT}/admin/queues`);
-    console.log('Server is running on port', PORT);
+    console.log(`Bull Board available at http://localhost:${PORT}/admin/queues`);
+    console.log(`Server is running on port ${PORT}`);
 });
