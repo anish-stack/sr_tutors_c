@@ -15,21 +15,21 @@ const redisClient = redis.createClient({
     url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
 });
 
-(async () => {
-    redisClient.on("error", (err) => {
-        console.log(err);
-    });
+// (async () => {
+//     redisClient.on("error", (err) => {
+//         console.log(err);
+//     });
 
-    redisClient.on("ready", () => console.log("Redis is ready"));
+//     redisClient.on("ready", () => console.log("Redis is ready"));
 
-    try {
-        await redisClient.connect();
-        await redisClient.ping();
-        app.locals.redis = redisClient;
-    } catch (err) {
-        console.log(err);
-    }
-})();
+//     try {
+//         await redisClient.connect();
+//         await redisClient.ping();
+//         app.locals.redis = redisClient;
+//     } catch (err) {
+//         console.log(err);
+//     }
+// })();
 
 // Middleware for custom headers
 app.use((req, res, next) => {
