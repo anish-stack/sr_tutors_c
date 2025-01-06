@@ -10,9 +10,9 @@ const SendWhatsAppMessage = require('../utils/SendWhatsappMsg.js');
 const Bull = require('bull');
 // Register a vendor and send a verification email
 
-const fileUploadQueue = new Bull('file-upload-queue', {
-    redis: { host: process.env.REDIS_HOST, port: process.env.REDIS_PORT },
-});
+// const fileUploadQueue = new Bull('file-upload-queue', {
+//     redis: { host: process.env.REDIS_HOST, port: process.env.REDIS_PORT },
+// });
 
 
 exports.registerVendor = async (req, res) => {
@@ -295,13 +295,13 @@ exports.registerVendor = async (req, res) => {
 
         await insertBh.save();
         await vendor.save();
-        fileUploadQueue.add({ userId: vendor._id, fileFirst: imageFileOne, fileSecond: imageFileTwo, fileThird: imageFileThree }, {
-            attempts: 3,
-            backoff: {
-                type: 'exponential', 
-                delay: 5000,
-            },
-        });
+        // fileUploadQueue.add({ userId: vendor._id, fileFirst: imageFileOne, fileSecond: imageFileTwo, fileThird: imageFileThree }, {
+        //     attempts: 3,
+        //     backoff: {
+        //         type: 'exponential', 
+        //         delay: 5000,
+        //     },
+        // });
 
         res.status(201).json({
             success: true,

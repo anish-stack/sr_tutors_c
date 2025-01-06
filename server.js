@@ -8,12 +8,12 @@ const app = express();
 const redis = require("redis");
 const connectDb = require("./config/db");
 const router = require("./routes/routes");
-const setupBullBoard = require('./bullBoard');
+// const setupBullBoard = require('./bullBoard');
 
 // Redis client setup
-const redisClient = redis.createClient({
-    url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
-});
+// const redisClient = redis.createClient({
+//     url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
+// });
 
 // (async () => {
 //     redisClient.on("error", (err) => {
@@ -57,28 +57,28 @@ app.get("/", (req, res) => {
     res.send("Hello World I am From Olyox !");
 });
 
-app.get("/Flush-all-Redis-Cached", async (req, res) => {
-    try {
-        const redisClient = req.app.locals.redis;
+// app.get("/Flush-all-Redis-Cached", async (req, res) => {
+//     try {
+//         const redisClient = req.app.locals.redis;
 
-        if (!redisClient) {
-            return res.status(500).json({
-                success: false,
-                message: "Redis client is not available.",
-            });
-        }
+//         if (!redisClient) {
+//             return res.status(500).json({
+//                 success: false,
+//                 message: "Redis client is not available.",
+//             });
+//         }
 
-        await redisClient.flushAll(); // Flush all the Redis data
-        res.redirect("/");
-    } catch (err) {
-        console.log("Error in flushing Redis cache:", err);
-        res.status(500).json({
-            success: false,
-            message: "An error occurred while clearing the Redis cache.",
-            error: err.message,
-        });
-    }
-});
+//         await redisClient.flushAll(); // Flush all the Redis data
+//         res.redirect("/");
+//     } catch (err) {
+//         console.log("Error in flushing Redis cache:", err);
+//         res.status(500).json({
+//             success: false,
+//             message: "An error occurred while clearing the Redis cache.",
+//             error: err.message,
+//         });
+//     }
+// });
 
 app.use("/api/v1", router);
 
@@ -114,10 +114,10 @@ app.use((err, req, res, next) => {
 });
 
 // Setup Bull Board (keep this part as is)
-setupBullBoard(app);
+// setupBullBoard(app);
 
 // Start the server without clustering
 app.listen(PORT, () => {
-    console.log(`Bull Board available at http://localhost:${PORT}/admin/queues`);
+    // console.log(`Bull Board available at http://localhost:${PORT}/admin/queues`);
     console.log('Server is running on port', PORT);
 });
