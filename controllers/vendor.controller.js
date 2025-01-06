@@ -573,201 +573,102 @@ exports.resendOtp = async (req, res) => {
 };
 
 
+const jwt = require("jsonwebtoken");
+
 exports.loginVendor = async (req, res) => {
     try {
         const { email, password } = req.body;
 
         console.log("Login request received with email:", email);
-        // Step 1: Check if both email and password are provided
+
+        // Step 1: Validate input
         if (!email || !password) {
             console.error("Missing email or password:", { email, password });
-            return res.status(400).json({ success: false, message: 'Please provide both email and password' });
+            return res.status(400).json({
+                success: false,
+                message: "Please provide both email and password.",
+            });
         }
 
-
-        // Step 2: Try to find the vendor by referral or number
-        let vendor = await Vendor_Model.findOne({ myReferral: email }).populate('category')
-        .populate('member_id')
-        .populate('payment_id')
-        .populate('payment_id')
-        .populate('copyParentId')
-        .populate({
-            path: 'Level1',
-            populate: [
-                { path: 'Child_referral_ids' },
-                { path: 'category' },
-                { path: 'payment_id' },
-                { path: 'member_id' }
-            ],
-        })
-        .populate({
-            path: 'Level2',
-            populate: [
-                { path: 'Child_referral_ids' },
-                { path: 'category' },
-                { path: 'payment_id' },
-                { path: 'member_id' }
-            ],
-        })
-        .populate({
-            path: 'Level3',
-            populate: [
-                { path: 'Child_referral_ids' },
-                { path: 'category' },
-                { path: 'payment_id' },
-                { path: 'member_id' }
-            ],
-        })
-        .populate({
-            path: 'Level4',
-            populate: [
-                { path: 'Child_referral_ids' },
-                { path: 'category' },
-                { path: 'payment_id' },
-                { path: 'member_id' }
-            ],
-        })
-        .populate({
-            path: 'Level5',
-            populate: [
-                { path: 'Child_referral_ids' },
-                { path: 'category' },
-                { path: 'payment_id' },
-                { path: 'member_id' }
-            ],
-        })
-        .populate({
-            path: 'Level6',
-            populate: [
-                { path: 'Child_referral_ids' },
-                { path: 'category' },
-                { path: 'payment_id' },
-                { path: 'member_id' }
-            ],
-        })
-        .populate({
-            path: 'Level7',
-            populate: [
-                { path: 'Child_referral_ids' },
-                { path: 'category' },
-                { path: 'payment_id' },
-                { path: 'member_id' }
-            ],
-        });
-
-        console.log("Vendor data found by myReferral:", vendor);
+        // Step 2: Find the vendor by myReferral or number
+        let vendor = await Vendor_Model.findOne({ myReferral: email })
+            .populate("category")
+            .populate("member_id")
+            .populate("payment_id")
+            .populate("copyParentId");
 
         if (!vendor) {
-            vendor = await Vendor_Model.findOne({ number: email }).populate('category')
-            .populate('member_id')
-            .populate('payment_id')
-            .populate('payment_id')
-            .populate('copyParentId')
-            .populate({
-                path: 'Level1',
-                populate: [
-                    { path: 'Child_referral_ids' },
-                    { path: 'category' },
-                    { path: 'payment_id' },
-                    { path: 'member_id' }
-                ],
-            })
-            .populate({
-                path: 'Level2',
-                populate: [
-                    { path: 'Child_referral_ids' },
-                    { path: 'category' },
-                    { path: 'payment_id' },
-                    { path: 'member_id' }
-                ],
-            })
-            .populate({
-                path: 'Level3',
-                populate: [
-                    { path: 'Child_referral_ids' },
-                    { path: 'category' },
-                    { path: 'payment_id' },
-                    { path: 'member_id' }
-                ],
-            })
-            .populate({
-                path: 'Level4',
-                populate: [
-                    { path: 'Child_referral_ids' },
-                    { path: 'category' },
-                    { path: 'payment_id' },
-                    { path: 'member_id' }
-                ],
-            })
-            .populate({
-                path: 'Level5',
-                populate: [
-                    { path: 'Child_referral_ids' },
-                    { path: 'category' },
-                    { path: 'payment_id' },
-                    { path: 'member_id' }
-                ],
-            })
-            .populate({
-                path: 'Level6',
-                populate: [
-                    { path: 'Child_referral_ids' },
-                    { path: 'category' },
-                    { path: 'payment_id' },
-                    { path: 'member_id' }
-                ],
-            })
-            .populate({
-                path: 'Level7',
-                populate: [
-                    { path: 'Child_referral_ids' },
-                    { path: 'category' },
-                    { path: 'payment_id' },
-                    { path: 'member_id' }
-                ],
-            });
-;
-            console.log("Vendor data found by number:", vendor);
+            vendor = await Vendor_Model.findOne({ number: email })
+                .populate("category")
+                .populate("member_id")
+                .populate("payment_id")
+                .populate("copyParentId");
         }
 
-        // Step 3: Check if vendor exists
         if (!vendor) {
             console.warn("Vendor not found for email/number:", email);
             return res.status(404).json({
                 success: false,
-                message: 'Vendor not found. Please check your email or number and try again.',
+                message: "Vendor not found. Please check your email or number and try again.",
             });
         }
 
-        // Step 4: Check if the account is blocked
+        console.log("Vendor data found:", { vendorId: vendor._id, email });
+
+        // Step 3: Check if the account is blocked
         if (vendor.isActive === false) {
             console.warn("Blocked vendor attempted login:", { vendorId: vendor._id, email });
-            return res.status(401).json({
+            return res.status(403).json({
                 success: false,
-                message: 'Your account has been blocked due to suspicious activity. Please contact the admin for further assistance.'
+                message: "Your account has been blocked. Please contact the admin for assistance.",
             });
         }
 
-        // Step 5: Compare the password
-        console.log("Comparing password for vendor:", { vendorId: vendor._id, email });
+        // Step 4: Verify the password
         const isPasswordMatch = await vendor.comparePassword(password);
-        console.log("Password match status:", isPasswordMatch);
-
         if (!isPasswordMatch) {
             console.warn("Invalid password attempt for vendor:", { vendorId: vendor._id, email });
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.status(401).json({
+                success: false,
+                message: "Invalid credentials. Please try again.",
+            });
         }
 
-        // Step 6: Send the token upon successful login
-        console.log("Successful login for vendor:", { vendorId: vendor._id, email });
-        await sendToken(vendor, res, 200);
+        console.log("Password verified for vendor:", { vendorId: vendor._id, email });
 
+        // Step 5: Generate JWT token
+        const token = jwt.sign({ id: vendor._id }, process.env.JWT_SECRET, {
+            expiresIn: process.env.JWT_EXPIRES_TIME,
+        });
+
+        // Step 6: Set token in cookie and respond
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            expires: new Date(
+                Date.now() + process.env.JWT_COOKIE_EXPIRES_TIME * 24 * 60 * 60 * 1000
+            ),
+        };
+
+        res.status(200)
+            .cookie("token", token, cookieOptions)
+            .json({
+                success: true,
+                message: "Login successful.",
+                token,
+                vendor,
+            });
+
+        console.log("Successful login response sent:", { vendorId: vendor._id, email });
     } catch (error) {
-        // Step 7: Catch and log unexpected errors
-        console.error('Error logging in vendor:', error.message, error.stack);
-        res.status(500).json({ success: false, message: 'Internal server error' });
+        console.error("Error logging in vendor:", error.message, error.stack);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+        });
     }
 };
+
 
 
 // Vendor logout (simple session-based logout example)

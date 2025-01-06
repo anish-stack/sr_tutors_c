@@ -37,7 +37,6 @@ const redisClient = redis.createClient({
 app.use((req, res, next) => {
     // Allowed origins for CORS
     const ALLOWED_ORIGINS = [
-        "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:5173",
         "https://olyox.com",
